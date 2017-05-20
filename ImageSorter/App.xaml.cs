@@ -13,5 +13,18 @@ namespace ImageSorter
     /// </summary>
     public partial class App : Application
     {
+        private void Start(object sender, StartupEventArgs e)
+        {
+            var win = new CategorizationWindow(new List<string>(), new List<string>(), new Dictionary<string, string>(), new Dictionary<string, string>());
+
+            win.JobCompleted += Win_JobCompleted;
+
+            win.Show();
+        }
+
+        private void Win_JobCompleted(CategorizationWindow win)
+        {
+            var res = win.Result;
+        }
     }
 }
