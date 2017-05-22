@@ -13,6 +13,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using Utilites;
+using WpfAnimatedGif;
 
 namespace ImageSorter
 {
@@ -27,6 +28,8 @@ namespace ImageSorter
         private List<string> categorydirs;
         private Dictionary<string, string> namemap = new Dictionary<string, string>();
         private Dictionary<string, string> shortcuts = new Dictionary<string, string>();
+
+        private string TitleFormat;
 
         #region private List<List<int>> Categs;
         private List<List<int>> _categorizations = null;
@@ -46,18 +49,17 @@ namespace ImageSorter
                 return _categorizations;
             }
         }
+
         #endregion // l[x] where x is file index, result is categ indexes
 
         #region Initializers
-        private CategorizationWindow()
+
+        public CategorizationWindow(List<string> fileList, List<string> catdirs)
         {
             InitializeComponent();
 
-            files = new List<string>();
-        }
+            JobCompleted += (CategorizationWindow win) => { };
 
-        public CategorizationWindow(List<string> fileList, List<string> catdirs) : this()
-        {
             files = fileList;
             categorydirs = catdirs;
         }
@@ -73,12 +75,24 @@ namespace ImageSorter
         {
             shortcuts = shortc;
         }
+
+        public CategorizationWindow(List<string> fileList, List<string> catdirs, Dictionary<string, string> nameMap, Dictionary<string, string> shortc, CategorizationResult res)
+            : this(fileList, catdirs, nameMap, shortc)
+        {
+            Resume(res);
+        }
         #endregion
 
         private ExitState exitType = ExitState.UserClose;
+        public ExitState ExitType {
+            get => exitType;
+            set => exitType = value;
+        }
 
         private void GoPrevImage()
         {
+            SaveCheckboxState();
+
             if (pos > 0)
             {
                 curFile = files[--pos];
@@ -93,6 +107,8 @@ namespace ImageSorter
 
         private void LoadNextImage()
         {
+            SaveCheckboxState();
+
             if (files.Count > pos+1)
             {
                 curFile = files[++pos];
@@ -100,10 +116,33 @@ namespace ImageSorter
             }
             else
             {
-                MessageBox.Show("You're done!", "", MessageBoxButton.OK, MessageBoxImage.None);
+                if (HasCategorizedAll())
+                {
+                    MessageBox.Show("You're done!", "", MessageBoxButton.OK, MessageBoxImage.None);
 
-                exitType = ExitState.Done;
-                Close();
+                    ExitType = ExitState.Done;
+                    Close();
+                }
+            }
+        }
+
+        private bool chbxSaveFirs = true;
+
+        private void SaveCheckboxState()
+        {
+            if (pos < 0) return;
+
+            if (!chbxSaveFirs)
+            {
+                Categs[pos].Clear();
+            }
+
+            chbxSaveFirs = false;
+
+            for (int i = 0; i < checkboxes.Count; i++)
+            {
+                if ((bool) checkboxes[i].IsChecked)
+                    Categs[pos].Add(i);
             }
         }
 
@@ -111,18 +150,27 @@ namespace ImageSorter
         {
             #region Nav button format
             Button_Prev.Visibility = Visibility.Visible;
-            Button_Next.Content = new DynamicResourceExtension("NextText"); //Resources["NextText"];
+            Button_Next.Content = Resources["NextText"];
 
             if (pos == 0) {
                 Button_Prev.Visibility = Visibility.Hidden;
             } else
             if (pos == files.Count - 1)
             {
-                Button_Next.Content = new DynamicResourceExtension("DoneText");
+                Button_Next.Content = Resources["DoneText"];
             }
             #endregion
 
+            CategImage.Visibility = Visibility.Visible;
             CategImage.Source = new BitmapImage(new Uri(Path.GetFullPath(curFile)));
+            CategImageAnim.Visibility = Visibility.Collapsed;
+
+            if (MimeTypeMap.List.MimeTypeMap.GetMimeType(Path.GetExtension(curFile)).Contains("image/gif"))
+            {
+                CategImage.Visibility = Visibility.Collapsed;
+                ImageBehavior.SetAnimatedSource(CategImageAnim, CategImage.Source);
+                CategImageAnim.Visibility = Visibility.Visible;
+            }
 
             #region Set checkbox values
             foreach (CheckBox cb in checkboxes)
@@ -135,10 +183,25 @@ namespace ImageSorter
                 checkboxes[idx].IsChecked = true;
             }
             #endregion
+
+            TaskbarItemInfo.ProgressState = System.Windows.Shell.TaskbarItemProgressState.Paused;
+            TaskbarItemInfo.ProgressValue = pos*1d / files.Count;
+
+            if (TaskbarItemInfo.ProgressValue == 0) TaskbarItemInfo.ProgressValue = .05d;
+
+             Title = TitleFormat.SFormat(pos+1, files.Count);
         }
 
-        private void WindowOpened(object sender, EventArgs e)
+        private void WindowOpened(object sender, RoutedEventArgs e)
         {
+            if (closewhenopen)
+            {
+                Close();
+                return;
+            }
+
+            TitleFormat = Title;
+
             InitCheckboxes();
 
             LoadNextImage();
@@ -153,12 +216,10 @@ namespace ImageSorter
 
             for (int i = 0; i < categorydirs.Count; i++)
             {
-                CheckBox newcb = new CheckBox();
-                newcb.IsTabStop = cb_template.IsTabStop;
-
+                CheckBox newcb = Utils.ILClone(cb_template);//.ILClone();
                 string cdir = categorydirs[i];
 
-                string sname = Path.GetDirectoryName(cdir);
+                string sname = Path.GetFileName(cdir);
                 string name = sname;
                 if (namemap.ContainsKey(sname))
                     name = namemap[sname];
@@ -175,6 +236,7 @@ namespace ImageSorter
             }
         }
 
+        [Serializable]
         public struct CategorizationResult
         {
             public List<string> Files;
@@ -182,6 +244,7 @@ namespace ImageSorter
             public List<List<int>> Categorized;
             public int Position;
             public ExitState ExitState;
+            public int Completed;
         }
 
         public CategorizationResult Result;
@@ -189,34 +252,85 @@ namespace ImageSorter
         public delegate void WindowComplete(CategorizationWindow window);
         public event WindowComplete JobCompleted;
 
+        public new void Close()
+        {
+            base.Close();
+        }
+
         private void WindowClosing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            if (exitType == ExitState.Done)
+            SaveCheckboxState();
+
+            if (ExitType == ExitState.Done)
             {
                 // Finish Close
                 FinishClose();
             }
-            if (exitType == ExitState.UserClose)
+            if (ExitType == ExitState.UserClose)
             {
                 if (!HasCategorizedAll())
                 {
+                    TaskbarItemInfo.ProgressState = System.Windows.Shell.TaskbarItemProgressState.Error;
+
                     var result = MessageBox.Show(this, "You have not categorized all images! Are you sure you want to quit?", "", 
                         MessageBoxButton.YesNo, MessageBoxImage.Exclamation);
                     if (result == MessageBoxResult.Yes)
                     {
-                        exitType = ExitState.Incomplete;
+                        ExitType = ExitState.Incomplete;
                         // Finish close
                         FinishClose();
                     }
                     else
                     {
                         e.Cancel = true;
+                        
+                        TaskbarItemInfo.ProgressState = System.Windows.Shell.TaskbarItemProgressState.Paused;
                     }
                 }
                 else
                 {
-                    exitType = ExitState.Done;
+                    ExitType = ExitState.Done;
                     FinishClose();
+                }
+            }
+        }
+
+        private bool closewhenopen = false;
+
+        private void Resume(CategorizationResult res)
+        {
+            var filec = files;
+            files = res.Files;
+            files.AddRange(filec.Except(files));
+
+            var catc = categorydirs;
+            categorydirs = res.CategoryDirectories;
+            categorydirs.AddRange(catc.Except(categorydirs));
+
+            pos = res.Position-1;
+
+            var nel = Categs;
+            for (int i = 0; i < res.Categorized.Count; i++)
+            {
+                Categs[i] = res.Categorized[i];
+            }
+
+            if (res.ExitState != ExitState.Incomplete)
+            {
+                //Close();
+                //return;
+
+                var result = MessageBox.Show(this, "Would you like to modify the categorizations?", "",
+                        MessageBoxButton.YesNo, MessageBoxImage.Exclamation);
+                if (result == MessageBoxResult.Yes)
+                {
+
+                }
+                else
+                {
+                    pos = res.Position;
+                    ExitType = ExitState.Done;
+                    closewhenopen = true;
                 }
             }
         }
@@ -229,10 +343,25 @@ namespace ImageSorter
                 CategoryDirectories = categorydirs,
                 Categorized = Categs,
                 Position = pos,
-                ExitState = exitType
+                ExitState = ExitType,
+                Completed = NumberDone()
             };
 
             JobCompleted.Invoke(this);
+        }
+
+        private int NumberDone()
+        {
+            if (closewhenopen)
+            {
+                return Categs.Count;
+            }
+            int i = 0;
+            foreach (List<int> l in Categs)
+            {
+                if (l.Count != 0) i++;
+            }
+            return i;
         }
 
         private bool HasCategorizedAll()
@@ -245,15 +374,25 @@ namespace ImageSorter
             return true;
         }
 
-        private void WindowKeyUp(object sender, KeyEventArgs e)
+        private void WindowKeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Right) GoNextImage();
             if (e.Key == Key.Left) GoPrevImage();
 
-            if (checkkeybs.ContainsKey(e.Key.ToString()))
+            if (checkkeybs.ContainsKey(e.Key.ToString().ToUpper()))
             {
                 checkboxes[checkkeybs[e.Key.ToString()]].IsChecked = !checkboxes[checkkeybs[e.Key.ToString()]].IsChecked;
             }
+        }
+
+        private void GoPrevImage(object sender, RoutedEventArgs e)
+        {
+            GoPrevImage();
+        }
+
+        private void GoNextImage(object sender, RoutedEventArgs e)
+        {
+            GoNextImage();
         }
     }
 }

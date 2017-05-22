@@ -7,7 +7,7 @@
         xmlns:System="clr-namespace:System;assembly=mscorlib"
         x:Class="ImageSorter.CategorizationWindow"
         mc:Ignorable="d"
-        Title="Categorize" ResizeMode="NoResize" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto" SizeToContent="WidthAndHeight" MinWidth="400" MinHeight="287" Activated="WindowOpened" Closing="WindowClosing" KeyUp="WindowKeyUp">
+        Title="Categorize ({0}/{1})" ResizeMode="NoResize" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto" SizeToContent="WidthAndHeight" MinWidth="400" MinHeight="287" Closing="WindowClosing" KeyDown="WindowKeyDown" Loaded="WindowOpened">
     <Window.Resources>
         <CheckBox x:Key="FolderCheck" Content="{}{0}" ToolTip="Actual folder: {1}" IsTabStop="False"/>
         <System:String x:Key="PrevText">Previous</System:String>
@@ -15,7 +15,7 @@
         <System:String x:Key="DoneText">Done</System:String>
     </Window.Resources>
     <Window.TaskbarItemInfo>
-        <TaskbarItemInfo Description="Categorize the image m8!"/>
+        <TaskbarItemInfo Description="Categorize the image m8!" ProgressState="None"/>
     </Window.TaskbarItemInfo>
     <Grid Margin="5">
         <Grid.RowDefinitions>
@@ -25,7 +25,7 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition />
         </Grid.ColumnDefinitions>
-        <Grid x:Name="Navbar" Margin="0,0,0,4.6" Grid.Row="1" VerticalAlignment="Top">
+        <Grid x:Name="Navbar" Margin="0" Grid.Row="1" VerticalAlignment="Top">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
@@ -34,15 +34,16 @@
                 <ColumnDefinition/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <Button x:Name="Button_Prev" Grid.Column="0" Content="{DynamicResource PrevText}"/>
-            <Button x:Name="Button_Next" Content="{DynamicResource NextText}" Grid.Column="2" MinWidth="{Binding ActualWidth, ElementName=Button_Prev, Mode=OneWay}" />
+            <Button x:Name="Button_Prev" Grid.Column="0" Content="{DynamicResource PrevText}" Click="GoPrevImage"/>
+            <Button x:Name="Button_Next" Content="{DynamicResource NextText}" Grid.Column="2" MinWidth="{Binding ActualWidth, ElementName=Button_Prev, Mode=OneWay}" Click="GoNextImage" />
         </Grid>
         <Grid x:Name="ContentBox" >
             <Grid.ColumnDefinitions>
                 <ColumnDefinition x:Name="ImageCol"/>
                 <ColumnDefinition x:Name="ButtonBox" MinWidth="10" Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <Image x:Name="CategImage" Margin="0" VerticalAlignment="Top" HorizontalAlignment="Left"/>
+            <Image x:Name="CategImage" Margin="0" VerticalAlignment="Top" HorizontalAlignment="Left" MaxWidth="800" MaxHeight="600"/>
+            <Image x:Name="CategImageAnim" Margin="0" VerticalAlignment="Top" HorizontalAlignment="Left" MaxWidth="800" MaxHeight="600"/>
             <StackPanel x:Name="Buttons" Grid.Column="1"/>
         </Grid>
     </Grid>

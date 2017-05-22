@@ -1,0 +1,36 @@
+﻿<Window
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:ImageSorter"
+        xmlns:System="clr-namespace:System;assembly=mscorlib" x:Class="ImageSorter.ResumeDialog"
+        mc:Ignorable="d"
+        Title="Would you like to resume a previous session?" ResizeMode="NoResize" SizeToContent="WidthAndHeight" Loaded="WindowOpen" Closing="WindowClosing" FontSize="15">
+    <Window.Resources>
+
+        <System:String x:Key="Text_RadioNone">New Session</System:String>
+        <System:String x:Key="Radio_Groupname">SessionRadioGroup</System:String>
+
+        <RadioButton x:Key="RadioBase" Content="Positon: {0}/{1}, Categories: {2}, Completed {3}/{1}, State: {4}" IsChecked="False" ToolTip="File '{5}'" />
+        
+    </Window.Resources>
+    <Grid Margin="5">
+        <Grid.RowDefinitions>
+            <RowDefinition/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <StackPanel x:Name="RadioPanel">
+            <RadioButton x:Name="Radio_None" Content="{DynamicResource Text_RadioNone}" IsChecked="True" />
+        </StackPanel>
+        <Grid x:Name="Navbuttons" Grid.Row="1" >
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Button x:Name="CancelButton" Grid.Column="0" Content="Cancel" Width="64" Click="CancelClick" />
+            <Button x:Name="OKButton" Grid.Column="2" Content="OK" Width="64" Click="OkClick" />
+        </Grid>
+    </Grid>
+</Window>
