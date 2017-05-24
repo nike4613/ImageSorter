@@ -64,7 +64,7 @@ namespace ImageSorter
                 var fparts = file.Split('.');
 
                 var formatter = new BinaryFormatter();
-                var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read);
+                var stream = new FileStream(options[i], FileMode.Open, FileAccess.Read, FileShare.Read);
                 byte[] bye = new byte[App.ICMP_Head.Length];
                 stream.Read(bye, 0, App.ICMP_Head.Length);
 
