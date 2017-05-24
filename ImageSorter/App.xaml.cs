@@ -28,7 +28,7 @@ namespace ImageSorter
         private bool resume = false;
         private CategorizationWindow.CategorizationResult Resume;
 
-        public static readonly string ICMP_Loc = ".";
+        public static readonly string ICMP_Loc = ConfigurationManager.AppSettings["IMCPDir"];
         public static readonly string ICMP_Ext = ".icmp";
 
         public string CurrentHash;
@@ -159,6 +159,8 @@ namespace ImageSorter
 
         private List<string> GetDirsIn(string v)
         {
+            Directory.CreateDirectory(v);
+
             var va = Directory.EnumerateDirectories(v, "*", SearchOption.TopDirectoryOnly).ToList();
             return va;
         }
@@ -183,6 +185,9 @@ namespace ImageSorter
         private List<string> GetImagesIn(string v)
         {
             LoadImageExtensions();
+
+            Directory.CreateDirectory(v);
+
             var files = Directory.EnumerateFiles(v, "*", SearchOption.TopDirectoryOnly).ToList();
 
             var outf = new List<string>();

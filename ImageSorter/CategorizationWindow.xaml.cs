@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -161,16 +162,23 @@ namespace ImageSorter
             }
             #endregion
 
+            if (new FileInfo(curFile).Length > 10 * 1024 * 1024)
+                GC.Collect();
+
             CategImage.Visibility = Visibility.Visible;
             CategImage.Source = new BitmapImage(new Uri(Path.GetFullPath(curFile)));
+            CategImageAnim.Source = new BitmapImage();
             CategImageAnim.Visibility = Visibility.Collapsed;
 
             if (MimeTypeMap.List.MimeTypeMap.GetMimeType(Path.GetExtension(curFile)).Contains("image/gif"))
             {
                 CategImage.Visibility = Visibility.Collapsed;
-                ImageBehavior.SetAnimatedSource(CategImageAnim, CategImage.Source);
+                ImageBehavior.SetAnimatedSource(CategImageAnim, new BitmapImage(new Uri(Path.GetFullPath(curFile))));
                 CategImageAnim.Visibility = Visibility.Visible;
             }
+
+            if (System.Diagnostics.Process.GetCurrentProcess().WorkingSet64 > 1L * 1024 * 1024 * 1024)
+                GC.Collect();
 
             #region Set checkbox values
             foreach (CheckBox cb in checkboxes)
@@ -303,6 +311,19 @@ namespace ImageSorter
             files = res.Files;
             files.AddRange(filec.Except(files));
 
+            foreach (var file in files)
+            {
+                if (!File.Exists(file))
+                {
+                    MessageBox.Show(this, "One or more files referenced by this ICMP no longer exist, therefore you cannot change data in this file.", "", MessageBoxButton.OK, MessageBoxImage.Error);
+                    closewhenopen = true;
+                    var proc = Utils.ProcessCommandLine(Assembly.GetEntryAssembly().Location, Environment.GetCommandLineArgs());
+                    proc.Start();
+                    Application.Current.Shutdown();
+                    return;
+                }
+            }
+
             var catc = categorydirs;
             categorydirs = res.CategoryDirectories;
             categorydirs.AddRange(catc.Except(categorydirs));
@@ -317,9 +338,6 @@ namespace ImageSorter
 
             if (res.ExitState != ExitState.Incomplete)
             {
-                //Close();
-                //return;
-
                 var result = MessageBox.Show(this, "Would you like to modify the categorizations?", "",
                         MessageBoxButton.YesNo, MessageBoxImage.Exclamation);
                 if (result == MessageBoxResult.Yes)
