@@ -169,7 +169,7 @@ namespace ImageSorter
         public static void LoadImageExtensions()
         {
             if (ImageExtensions.Count != 0) return;
-            foreach (var kv in MimeTypeMap.List.MappingList.Mappings)
+            foreach (var kv in MimeTypeMap.List.MimeList.Mappings)
             {
                 foreach (var mime in kv.Value)
                 {

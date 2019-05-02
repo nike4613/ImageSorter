@@ -166,7 +166,14 @@ namespace ImageSorter
                 GC.Collect();
 
             CategImage.Visibility = Visibility.Visible;
-            CategImage.Source = new BitmapImage(new Uri(Path.GetFullPath(curFile)));
+            try
+            {
+                CategImage.Source = new BitmapImage(new Uri(Path.GetFullPath(curFile)));
+            }
+            catch (Exception)
+            {
+                return;
+            }
             CategImageAnim.Source = new BitmapImage();
             CategImageAnim.Visibility = Visibility.Collapsed;
 
